@@ -82,3 +82,38 @@ legend(800,70,inset=0.005,
        c("Cumulative Personal Loan when sorted using predicted values",
          "Cumulative Personal Loan using average"),
        lty= c(1,2), bty= "n", cex= 0.7, x.intersp=0.3, y.intersp= 0.5)
+
+
+
+################ Flight Details ################
+df= read.xlsx(file.choose(),1,header = T)
+df= df[,!apply(is.na(df),2,all)]
+str(df)
+
+dfb= df
+df$STD= strptime(format(df$STD, "%H:%M:%S"), "%H:%M:%S")
+df$ATD= strptime(format(df$ATD, "%H:%M:%S"), "%H:%M:%S")
+df$STA= strptime(format(df$STA, "%H:%M:%S"), "%H:%M:%S")
+df$ATA= strptime(format(df$ATA, "%H:%M:%S"), "%H:%M:%S")
+
+
+breaks= seq(strptime("00:00:00","%H:%M:%S"),strptime("24:00:00","%H:%M:%S"),
+            by= "6 hours")
+labelsv= c("0-6","6-12","12-18","18-24")
+DEPT= cut(df$ATD, breaks= breaks, right= F, labels = labelsv)
+
+df1= cbind(df, DEPT)
+
+df1$Day= as.factor(df1$Day)
+levels(df1$Day)
+levels(df1$Day=c("Sunday","Monday"))
+df1$FLTIME= as.difftime(as.character(df1$FLTIME))
+
+str(df1)
+head(df1)
+
+dfb1= df1
+df1= df1[,-c(1,3,5:8)]
+str(df1)
+head(df1)
+
