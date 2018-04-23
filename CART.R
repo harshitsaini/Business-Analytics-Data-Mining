@@ -12,7 +12,7 @@ data.frame("Household Number"= 1:20,"Annual Income (in lakhs)"= df$Annual_Income
            check.names = F)
 
 par(mar=c(5.1,5.1,5.1,5.1))
-plot(df$Annual_Income, df$Household_Area, las=1,
+plot(x=df$Annual_Income,y= df$Household_Area, las=1,
      xlab= "Annual Income", ylab= "Household Area",
      xlim = c(2,12), ylim= c(13,25), pch= c(21,19)[as.numeric(df$Ownership)])
 legend("bottomright", inset= 0.005, c("owner","Non-owner"),
@@ -55,7 +55,7 @@ emorg= -(10/20)*log2(10/20)- (10/20)*log2(10/20)
 #upper rectangle
 giniurec= 1- (7/10)^2- (3/10)^2
 emurec= -(7/10)*log2(7/10)- (3/10)*log2(3/10)
-ginilrec= giniurec
+ginilrec= giniurec # as upper rectangle and lower rectangle have symmetric proportions
 emlrec= emurec
 
 ginisplit1= (10/20)*giniurec + (10/20)*ginilrec
@@ -87,8 +87,7 @@ text(mod,splits= T, use.n = T, all= F, minlength = 0,
 
 install.packages("rpart.plot")
 library(rpart.plot)
-prp(mod,type=1, extra=1 , under= T, varlen= 0, cex= 0.7,
-    compress = T, Margin = 0 , digits = 0 ,
+prp(mod,type=1, extra=1 , under= T, varlen= 0, cex= 0.7,compress = T, Margin = 0 , digits = 0 ,
     split.cex = 0.8, under.cex = 0.8)
 
 #Node numbering 
@@ -102,11 +101,102 @@ prp(modsub,type=1, extra=1 , under= T, varlen= 0, cex= 0.7,
     compress = T, Margin = 0 , digits = 0 ,
     split.cex = 0.8, under.cex = 0.8, nn=T, nn.cex= 0.6)
 #First 3 splits
-modsub1= snip.rpart(mod,toss=c(3,6:712:13, 24:25))
+modsub1= snip.rpart(mod,toss=c(3,6:7,12:13, 24:25))
 prp(modsub1,type=1, extra=1 , under= T, varlen= 0, cex= 0.7,
     compress = T, Margin = 0 , digits = 0 ,
     split.cex = 0.8, under.cex = 0.8, nn=T, nn.cex= 0.6)
 
 
+summary(mod)
 
 
+#################
+###promooffers###
+
+df= read.xlsx(file.choose(),1,header = T)
+df= df[,!apply(is.na(df),2,all)]
+str(df)
+
+tPIN= table(as.factor(df$Pin.Code))
+PINnames= dimnames(tPIN)[[1]]
+
+C_PINcode= NULL
+for(x in PINnames) {
+  C_PINcode= c(C_PINcode, length(which(as.character(df$Pin.Code)==x & df$Promoffer==1)))
+}
+barplot(C_PINcode, names.arg = PINnames, xlab= "PIN Code", las=3, ylab= "Promotional offers Accepted",
+        ylim=c(0,20), cex.names= 0.6)
+
+table(as.factor(C_PINcode))
+
+for(x in PINnames) {
+  index= which(as.character(df$Pin.Code)==x)
+  df[index,]$Pin.Code=rep(C_PINcode[which(PINnames==x)],length(index))
+}
+
+df$Pin.Code= as.factor(df$Pin.Code)
+df$Education= as.factor(df$Education)
+df$Promoffer =as.factor(df$Promoffer)
+df$Online= as.factor(df$Online)
+
+str(df)
+
+mod = rpart(Promoffer~. , method= "class", data= df,
+            control= rpart.control(cp= 0, minsplit = 2, minbucket= 1,
+                                   maxcompete = 0, maxsurrogate = 0 ,xval= 0),parms= list(split= "gini"))
+
+mod_predict= predict(mod, df, type= "class")
+table("Actual value"=df$Promoffer, "Predicted value"=mod_predict)
+mean(mod_predict==df$Promoffer)
+
+toss1= as.integer(row.names(mod$frame))
+x= mod$frame$var
+
+
+
+
+### REGRESSION TREES ###
+###usedcars dataset###
+
+df= read.xlsx(file.choose(),1,header = T)
+df= df[,!apply(is.na(df),2,all)]
+str(df)
+
+Age= 2017-df$Mfg_Year
+df= cbind(df,Age)
+
+dfb= df
+df= df[,-c(1,2,3,11)]
+
+str(df)
+df$Transmission= as.factor(df$Transmission)
+str(df)
+
+## Partitioning (60%:40%)
+partidx= sample(1:nrow(df),0.6*nrow(df),replace= F)
+dftrain= df[partidx,]
+dftest= df[-partidx,]
+
+library(rpart)
+mod = rpart(Price~. , method= "anova", data= dftrain,
+            control= rpart.control(cp= 0, minsplit = 2, minbucket= 1,
+                                   maxcompete = 0, maxsurrogate = 0 ,xval= 0),parms= list(split= "gini"))
+
+# No of decision nodes
+nrow(mod$splits)
+
+# No of terminal nodes
+nrow(mod$frame)-nrow(mod$splits)
+
+toss1= as.integer(row.names(mod$frame)); toss1
+
+DFP= data.frame("toss"= toss1, "Svar"=mod$frame$var,
+                "CP"=mod$frame$complexity); DFP
+
+DFP1= DFP[DFP$Svar!="<leaf>",] ;DFP1
+
+DFP2= DFP1[order(DFP1$CP, -DFP1$toss, decreasing = T),] ; DFP2
+
+rownames(DFP2)= 1:nrow(DFP2); DFP2
+
+toss2= DFP2$toss

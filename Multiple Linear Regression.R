@@ -150,3 +150,4 @@ coef(mod6,1:8)
 
 mod7= step(lm(Price~., data = dftrain), direction = "both")
 #options(op)
+
