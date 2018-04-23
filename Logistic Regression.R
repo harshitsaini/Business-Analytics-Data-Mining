@@ -48,5 +48,37 @@ curve(exp(logit)/(1+exp(logit)), from =-100, to=100, type="l", xname= "logit",
 
 modtest= predict(mod1, dftest[,-c(3)],type= "response")
 ### response returns probabilities
+
 modtestl= predict(mod1, dftest[,-c(3)],type= "link")
-modtestl= ifelse(modtest>0.5,1,0)
+### return logit values
+
+modtestc= ifelse(modtest>0.5,1,0)
+
+table("Actual value"=dftest$Promoffer, "Predicted"=modtestc)
+
+mean(modtestc == df$Promoffer)
+mean(modtestc != df$Promoffer)
+
+head(data.frame(
+  "Predicted class"= modtestc,
+  "ACtual class"=dftest$Promoffer,
+  "Prob for 1(success)"= modtest,
+  "Log odds"= modtestl,
+  dftest[,-3], check.names = F
+)) 
+
+#Cumulative Lift Curve
+dflift= data.frame("Probabilty of class 1"=modtest,"Actual class"= as.numeric(as.character(dftest$Promoffer)),check.names = F)
+
+dflift= dflift[order(dflift[,1],decreasing = T),]
+CumACtualClass= cumsum(dflift[,2])
+dflift= cbind(dflift, CumACtualClass)
+head(dflift)
+
+plot(1:nrow(dflift), dflift$CumACtualClass, "l",
+     xlab = "# cases", ylab="cumulative", xlim= c(0,2100),
+     ylim = c(0,210))
+legend(800,70,inset=0.005,
+       c("Cumulative Personal Loan when sorted using predicted values",
+         "Cumulative Personal Loan using average"),
+       lty= c(1,2), bty= "n", cex= 0.7, x.intersp=0.3, y.intersp= 0.5)
